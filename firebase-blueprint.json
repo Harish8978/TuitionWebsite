@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile with role (admin or student)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "description": "User email" },
+        "displayName": { "type": "string", "description": "User's full name" },
+        "role": { "type": "string", "enum": ["admin", "student", "staff"], "description": "User's role" },
+        "grade": { "type": "string", "description": "Student's class/grade (if student)" },
+        "phone": { "type": "string", "description": "Contact phone number" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "courses": {
+      "title": "Course",
+      "description": "Tuition course details",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Course title" },
+        "description": { "type": "string", "description": "Course description" },
+        "grade": { "type": "string", "description": "Target grade/class" },
+        "subjects": { "type": "array", "items": { "type": "string" }, "description": "Subjects covered" },
+        "price": { "type": "string", "description": "Course fee or pricing" },
+        "image": { "type": "string", "description": "Course image URL" }
+      },
+      "required": ["title", "description", "grade"]
+    },
+    "enquiries": {
+      "title": "Enquiry",
+      "description": "Student or parent enquiry for tuition",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the person enquiring" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "grade": { "type": "string", "description": "Student's class or grade" },
+        "message": { "type": "string", "description": "Enquiry message" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Time of enquiry" }
+      },
+      "required": ["name", "phone", "grade", "message", "timestamp"]
+    },
+    "testimonials": {
+      "title": "Testimonial",
+      "description": "Student or parent feedback/testimonial",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the person giving feedback" },
+        "marks": { "type": "string", "description": "Academic achievement or context (e.g. 95% in 10th)" },
+        "feedback": { "type": "string", "description": "The feedback message" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Time of feedback" }
+      },
+      "required": ["name", "feedback", "timestamp"]
+    },
+    "notes": {
+      "title": "Note",
+      "description": "Study material/notes for students",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Note title" },
+        "grade": { "type": "string", "description": "Target grade" },
+        "subject": { "type": "string", "description": "Subject" },
+        "url": { "type": "string", "description": "URL to the note/file" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Upload time" }
+      },
+      "required": ["title", "grade", "subject", "url", "timestamp"]
+    },
+    "attendance": {
+      "title": "Attendance",
+      "description": "Student attendance record",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "UID of the student" },
+        "date": { "type": "string", "format": "date", "description": "Attendance date" },
+        "status": { "type": "string", "enum": ["present", "absent"], "description": "Attendance status" }
+      },
+      "required": ["studentId", "date", "status"]
+    },
+    "marks": {
+      "title": "Mark",
+      "description": "Student academic marks",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "UID of the student" },
+        "subject": { "type": "string", "description": "Subject" },
+        "examName": { "type": "string", "description": "Name of the exam" },
+        "score": { "type": "number", "description": "Score obtained" },
+        "maxScore": { "type": "number", "description": "Maximum possible score" },
+        "date": { "type": "string", "format": "date", "description": "Exam date" }
+      },
+      "required": ["studentId", "subject", "examName", "score", "maxScore", "date"]
+    },
+    "staffs": {
+      "title": "Staff",
+      "description": "Tuition staff details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name" },
+        "email": { "type": "string", "description": "Email address" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "subjects": { "type": "array", "items": { "type": "string" }, "description": "Subjects taught" },
+        "dailySalary": { "type": "number", "description": "Daily salary rate" },
+        "joinDate": { "type": "string", "format": "date", "description": "Date of joining" }
+      },
+      "required": ["name", "email", "phone", "subjects", "dailySalary", "joinDate"]
+    },
+    "staffAttendance": {
+      "title": "Staff Attendance",
+      "description": "Staff attendance record",
+      "type": "object",
+      "properties": {
+        "staffId": { "type": "string", "description": "ID of the staff member" },
+        "date": { "type": "string", "format": "date", "description": "Attendance date" },
+        "present": { "type": "boolean", "description": "Attendance status" },
+        "clockInTime": { "type": "string", "format": "date-time", "description": "Time of clock-in" },
+        "markedVia": { "type": "string", "enum": ["qr-self-scan", "admin-manual"], "description": "Method of marking" }
+      },
+      "required": ["staffId", "date", "present", "clockInTime", "markedVia"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "users", "description": "User profiles" },
+    "/courses/{courseId}": { "schema": "courses", "description": "Tuition courses" },
+    "/enquiries/{enquiryId}": { "schema": "enquiries", "description": "Student enquiries" },
+    "/testimonials/{testimonialId}": { "schema": "testimonials", "description": "Student testimonials" },
+    "/notes/{noteId}": { "schema": "notes", "description": "Study materials" },
+    "/attendance/{attendanceId}": { "schema": "attendance", "description": "Attendance records" },
+    "/marks/{markId}": { "schema": "marks", "description": "Student marks" },
+    "/staffs/{staffId}": { "schema": "staffs", "description": "Staff profiles" },
+    "/staffAttendance/{attendanceId}": { "schema": "staffAttendance", "description": "Staff attendance records" }
+  }
+}
