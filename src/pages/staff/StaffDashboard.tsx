@@ -32,6 +32,8 @@ import {
 
 import { Link } from 'react-router-dom';
 import { handleFirestoreError, OperationType } from '../../utils/firestoreError';
+import { verifyTuitionLocation } from '../../utils/gpsVerification';
+import { TUITION_LOCATION } from '../../config/tuitionLocation';
 import TeachingIdeas from '../../components/ai/TeachingIdeas';
 
 interface StaffData {
@@ -64,8 +66,11 @@ const StaffDashboard = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [checkInStatus, setCheckInStatus] = useState<'idle' | 'loading' | 'success' | 'already-marked' | 'error'>('idle');
+  const [checkInStatus, setCheckInStatus] = useState<
+    'idle' | 'gps-checking' | 'loading' | 'success' | 'already-marked' | 'error' | 'gps-denied' | 'outside-tuition'
+  >('idle');
   const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [gpsDistance, setGpsDistance] = useState<number | null>(null);
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -79,18 +84,49 @@ const StaffDashboard = () => {
 
   const handleCheckIn = async () => {
     if (!staffData || !user) return;
-    setCheckInStatus('loading');
-    setCheckInError(null);
 
     const today = new Date().toISOString().split('T')[0];
-    const attendanceId = `${staffData.id}_${today}`;
-    
     const hasCheckedIn = attendance.some(record => record.date === today && record.present);
     if (hasCheckedIn) {
       setCheckInStatus('already-marked');
       return;
     }
-    
+
+    // Step 1: GPS Verification
+    setCheckInStatus('gps-checking');
+    setCheckInError(null);
+    setGpsDistance(null);
+
+    let gpsResult: Awaited<ReturnType<typeof verifyTuitionLocation>> | null = null;
+    try {
+      gpsResult = await verifyTuitionLocation();
+    } catch (err: any) {
+      if (err.message === 'GPS_DENIED') {
+        setCheckInStatus('gps-denied');
+        setCheckInError('Location access was denied. Please allow location permission and try again.');
+      } else if (err.message === 'GPS_NOT_SUPPORTED') {
+        setCheckInStatus('gps-denied');
+        setCheckInError('Your browser does not support GPS. Please use a modern mobile browser.');
+      } else {
+        setCheckInStatus('gps-denied');
+        setCheckInError('Could not get your location. Please check GPS settings and try again.');
+      }
+      return;
+    }
+
+    if (!gpsResult.isAtTuition) {
+      setGpsDistance(gpsResult.distanceMeters);
+      setCheckInStatus('outside-tuition');
+      setCheckInError(
+        `You are ${gpsResult.distanceMeters}m away from ${TUITION_LOCATION.name}. ` +
+        `You must be within ${TUITION_LOCATION.radiusMeters}m to mark attendance.`
+      );
+      return;
+    }
+
+    // Step 2: Mark Attendance in Firestore
+    setCheckInStatus('loading');
+    const attendanceId = `${staffData.id}_${today}`;
     try {
       const attendanceDoc = doc(db, 'staffAttendance', attendanceId);
       await setDoc(attendanceDoc, {
@@ -99,13 +135,17 @@ const StaffDashboard = () => {
         date: today,
         present: true,
         clockInTime: serverTimestamp(),
-        markedVia: "manual-dashboard"
+        markedVia: 'qr-gps',
+        gpsLat: gpsResult.lat,
+        gpsLng: gpsResult.lng,
+        gpsAccuracy: gpsResult.accuracy,
+        distanceFromTuition: gpsResult.distanceMeters,
       });
       setCheckInStatus('success');
     } catch (err: any) {
       console.error(err);
       setCheckInStatus('error');
-      setCheckInError(`Failed: ${err.message || String(err)}`);
+      setCheckInError(`Failed to save attendance: ${err.message || String(err)}`);
     }
   };
 
@@ -359,8 +399,9 @@ const StaffDashboard = () => {
           <div className="bg-blue-900 rounded-[2.5rem] p-8 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden group">
             <div className="absolute -right-12 -top-12 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
             <h3 className="text-2xl font-black mb-6 tracking-tight uppercase relative z-10">DAILY ATTENDANCE</h3>
-            
-            {checkInStatus === 'already-marked' || checkInStatus === 'success' ? (
+
+            {/* ✅ Already marked or just succeeded */}
+            {(checkInStatus === 'already-marked' || checkInStatus === 'success') && (
               <div className="relative z-10 flex flex-col items-center justify-center space-y-4 py-4">
                 <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8 text-emerald-400" />
@@ -368,19 +409,70 @@ const StaffDashboard = () => {
                 <p className="font-bold text-lg text-emerald-300">Attendance Marked</p>
                 <p className="text-sm text-blue-200">You're all set for today!</p>
               </div>
-            ) : (
+            )}
+
+            {/* ❌ GPS denied */}
+            {checkInStatus === 'gps-denied' && (
+              <div className="relative z-10 space-y-4">
+                <div className="bg-orange-500/20 border border-orange-400/30 rounded-2xl p-4">
+                  <p className="text-orange-300 text-sm font-bold">📍 {checkInError}</p>
+                </div>
+                <button
+                  onClick={handleCheckIn}
+                  className="w-full bg-white text-blue-900 py-4 rounded-2xl font-bold hover:bg-blue-50 transition-all shadow-lg flex items-center justify-center gap-3"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* ❌ Outside tuition */}
+            {checkInStatus === 'outside-tuition' && (
+              <div className="relative z-10 space-y-4">
+                <div className="bg-red-500/20 border border-red-400/30 rounded-2xl p-4">
+                  <p className="text-red-300 text-sm font-bold">🚫 {checkInError}</p>
+                  {gpsDistance !== null && (
+                    <div className="mt-2 w-full bg-white/10 rounded-full h-2">
+                      <div
+                        className="bg-red-400 h-2 rounded-full"
+                        style={{ width: `${Math.min((TUITION_LOCATION.radiusMeters / gpsDistance) * 100, 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleCheckIn}
+                  className="w-full bg-white text-blue-900 py-4 rounded-2xl font-bold hover:bg-blue-50 transition-all shadow-lg flex items-center justify-center gap-3"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* Default / loading / error states */}
+            {(checkInStatus === 'idle' || checkInStatus === 'gps-checking' || checkInStatus === 'loading' || checkInStatus === 'error') && (
               <div className="relative z-10 space-y-6">
-                <p className="text-blue-100 font-medium">Mark your attendance for today manually.</p>
+                <p className="text-blue-100 font-medium">
+                  {checkInStatus === 'gps-checking'
+                    ? '📍 Verifying your location…'
+                    : 'Scan the QR at the tuition entrance, then tap the button below.'}
+                </p>
                 {checkInStatus === 'error' && (
                   <p className="text-red-300 text-sm font-bold bg-red-900/40 p-3 rounded-xl">{checkInError}</p>
                 )}
-                <button 
+                <button
                   onClick={handleCheckIn}
-                  disabled={checkInStatus === 'loading'}
+                  disabled={checkInStatus === 'gps-checking' || checkInStatus === 'loading'}
                   className="w-full bg-white text-blue-900 py-4 rounded-2xl font-bold hover:bg-blue-50 transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <CheckCircle2 className="w-5 h-5" />
-                  {checkInStatus === 'loading' ? 'Marking...' : 'Mark Present Today'}
+                  {checkInStatus === 'gps-checking'
+                    ? 'Checking Location…'
+                    : checkInStatus === 'loading'
+                    ? 'Marking Attendance…'
+                    : 'Mark Present Today'}
                 </button>
               </div>
             )}

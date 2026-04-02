@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   Plus, 
@@ -14,8 +14,11 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
-  Download
+  Download,
+  QrCode,
+  Printer
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../../firebase';
 import { 
@@ -70,6 +73,15 @@ const ManageStaff = () => {
     dailySalary: 300,
     joinDate: new Date().toISOString().split('T')[0]
   });
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  // Default URL — staff should be on same WiFi as dev machine.
+  // Replace with your deployed URL once live (e.g. https://yoursite.com/staff)
+  const [qrUrl, setQrUrl] = useState(
+    typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.hostname}:5173/staff`
+      : 'http://localhost:5173/staff'
+  );
+  const qrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'staffs'), orderBy('name'));
@@ -381,6 +393,50 @@ const ManageStaff = () => {
             </div>
           </div>
 
+          {/* QR Code Card */}
+          <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-900/20">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white/10 p-2 rounded-xl">
+                <QrCode className="w-5 h-5 text-blue-300" />
+              </div>
+              <h3 className="text-lg font-black tracking-tight uppercase">Attendance QR</h3>
+            </div>
+            <p className="text-slate-400 text-xs font-medium mb-4 leading-relaxed">
+              Print this QR and place it at the tuition entrance. Staff scan it to open the check-in page.
+            </p>
+
+            {/* URL input */}
+            <div className="mb-4">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Check-in URL</label>
+              <input
+                type="text"
+                value={qrUrl}
+                onChange={(e) => setQrUrl(e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+              />
+            </div>
+
+            {/* QR Preview */}
+            <div className="flex justify-center mb-4">
+              <div className="bg-white p-3 rounded-2xl">
+                <QRCodeSVG
+                  value={qrUrl}
+                  size={140}
+                  bgColor="#ffffff"
+                  fgColor="#1e3a8a"
+                  level="H"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsQrModalOpen(true)}
+              className="w-full flex items-center justify-center gap-2 bg-white text-slate-900 py-3 rounded-2xl font-bold text-sm hover:bg-blue-50 transition-all"
+            >
+              <Printer className="w-4 h-4" />
+              View Full Size / Print
+            </button>
+          </div>
 
         </div>
       </div>
@@ -503,6 +559,53 @@ const ManageStaff = () => {
                 </div>
               </form>
             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* QR Print Modal */}
+      <AnimatePresence>
+        {isQrModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-white">
+            <div className="absolute top-8 right-8 print:hidden">
+              <button 
+                onClick={() => setIsQrModalOpen(false)}
+                className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-colors font-bold flex items-center gap-2"
+              >
+                <X className="w-5 h-5" />
+                Close
+              </button>
+            </div>
+            
+            <div className="flex flex-col items-center text-center space-y-8 max-w-lg w-full" ref={qrRef}>
+              <div className="space-y-4">
+                <h1 className="text-4xl font-black text-blue-900 tracking-tight uppercase">SK Tuition Center</h1>
+                <p className="text-2xl font-bold text-slate-600">Staff Attendance Scanner</p>
+              </div>
+              
+              <div className="bg-white p-8 rounded-[3rem] shadow-2xl border-4 border-blue-900/10">
+                <QRCodeSVG
+                  value={qrUrl}
+                  size={300}
+                  bgColor="#ffffff"
+                  fgColor="#1e3a8a"
+                  level="H"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-bold text-slate-500 text-xl">Scan with your phone to mark attendance.</p>
+                <p className="text-slate-400 font-medium">Make sure you are at the tuition center.</p>
+              </div>
+              
+              <button
+                onClick={() => window.print()}
+                className="mt-8 flex items-center gap-3 bg-blue-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-800 transition-all shadow-xl shadow-blue-900/20 print:hidden"
+              >
+                <Printer className="w-6 h-6" />
+                Print This Code
+              </button>
+            </div>
           </div>
         )}
       </AnimatePresence>

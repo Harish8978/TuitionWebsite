@@ -25,8 +25,7 @@ const ManageCourses: React.FC = () => {
     description: '',
     grade: '',
     subjects: '',
-    price: '',
-    image: ''
+    price: ''
   });
 
   const fetchCourses = async () => {
@@ -56,7 +55,7 @@ const ManageCourses: React.FC = () => {
 
     setShowForm(false);
     setEditingCourse(null);
-    setFormData({ title: '', description: '', grade: '', subjects: '', price: '', image: '' });
+    setFormData({ title: '', description: '', grade: '', subjects: '', price: '' });
     fetchCourses();
   };
 
@@ -67,8 +66,7 @@ const ManageCourses: React.FC = () => {
       description: course.description,
       grade: course.grade,
       subjects: course.subjects.join(', '),
-      price: course.price,
-      image: course.image
+      price: course.price
     });
     setShowForm(true);
   };
@@ -87,7 +85,7 @@ const ManageCourses: React.FC = () => {
         <button
           onClick={() => {
             setEditingCourse(null);
-            setFormData({ title: '', description: '', grade: '', subjects: '', price: '', image: '' });
+            setFormData({ title: '', description: '', grade: '', subjects: '', price: '' });
             setShowForm(true);
           }}
           className="bg-blue-900 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-800 transition-all shadow-lg"
@@ -172,19 +170,7 @@ const ManageCourses: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Image URL</label>
-                    <div className="relative">
-                      <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input
-                        type="url"
-                        placeholder="https://images.unsplash.com/..."
-                        className="w-full pl-12 pr-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 transition-all outline-none"
-                        value={formData.image}
-                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      />
-                    </div>
-                  </div>
+
 
                   <div className="md:col-span-2 space-y-2">
                     <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Course Description</label>
@@ -245,26 +231,18 @@ const ManageCourses: React.FC = () => {
               layout
               className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col group"
             >
-              <div className="relative aspect-video overflow-hidden">
-                <img
-                  src={course.image && course.image.trim() !== '' ? course.image : 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800'}
-                  alt={course.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800';
-                  }}
-                />
+              <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-8">
+                <BookOpen className="w-16 h-16 text-blue-200 group-hover:text-blue-300 transition-colors group-hover:scale-110 duration-500" />
                 <div className="absolute top-4 right-4 flex gap-2">
                   <button
                     onClick={() => handleEdit(course)}
-                    className="p-2 bg-white/90 backdrop-blur-sm text-blue-900 rounded-xl shadow-lg hover:bg-white transition-all"
+                    className="p-2 bg-white/90 backdrop-blur-sm text-blue-900 rounded-xl shadow-sm hover:shadow-md transition-all border border-slate-100"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(course.id)}
-                    className="p-2 bg-white/90 backdrop-blur-sm text-red-500 rounded-xl shadow-lg hover:bg-white transition-all"
+                    className="p-2 bg-white/90 backdrop-blur-sm text-red-500 rounded-xl shadow-sm hover:shadow-md transition-all border border-slate-100"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

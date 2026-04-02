@@ -250,18 +250,10 @@ const AdminOverview: React.FC = () => {
               transition={{ delay: i * 0.05 }}
               className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl transition-all"
             >
-              <div className="relative aspect-video overflow-hidden">
-                <img
-                  src={course.image && course.image.trim() !== '' ? course.image : 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800'}
-                  alt={course.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800';
-                  }}
-                />
+              <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-8">
+                <BookOpen className="w-16 h-16 text-blue-200 group-hover:text-blue-300 transition-colors group-hover:scale-110 duration-500" />
                 <div className="absolute top-4 right-4">
-                  <span className="bg-white/90 backdrop-blur-sm text-blue-900 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg">
+                  <span className="bg-white text-blue-900 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest shadow-sm border border-slate-100">
                     {course.grade}
                   </span>
                 </div>
