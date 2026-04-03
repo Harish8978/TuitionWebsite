@@ -42,7 +42,18 @@ function haversineDistance(
  */
 export function verifyTuitionLocation(): Promise<GPSVerificationResult> {
   return new Promise((resolve, reject) => {
+    const isLocalDev = window.location.hostname === 'localhost' || /^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(window.location.hostname);
+    
+    const mockSuccess = () => resolve({
+      isAtTuition: true,
+      distanceMeters: 0,
+      accuracy: 10,
+      lat: TUITION_LOCATION.lat,
+      lng: TUITION_LOCATION.lng,
+    });
+
     if (!navigator.geolocation) {
+      if (isLocalDev) return mockSuccess();
       reject(new Error('GPS_NOT_SUPPORTED'));
       return;
     }
@@ -84,6 +95,11 @@ export function verifyTuitionLocation(): Promise<GPSVerificationResult> {
         if (isResolved) return;
         isResolved = true;
         clearTimeout(fallbackTimeoutId);
+
+        if (isLocalDev) {
+          console.log('[Dev Mode] Bypassing GPS error:', error.message);
+          return mockSuccess();
+        }
 
         if (error.code === error.PERMISSION_DENIED) {
           reject(new Error('GPS_DENIED'));

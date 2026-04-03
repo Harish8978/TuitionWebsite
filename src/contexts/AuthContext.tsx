@@ -45,9 +45,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (user) {
           let isDynamicallyStaff = false;
           if (user.email) {
-            const staffQ = query(collection(db, 'staffs'), where('email', '==', user.email));
-            const staffSnap = await getDocs(staffQ);
-            isDynamicallyStaff = !staffSnap.empty;
+            try {
+              const staffQ = query(collection(db, 'staffs'), where('email', '==', user.email));
+              const staffSnap = await getDocs(staffQ);
+              isDynamicallyStaff = !staffSnap.empty;
+            } catch (queryErr) {
+              console.error("Error checking dynamically staff (permissions might not be ready):", queryErr);
+            }
           }
 
           const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -85,8 +89,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setProfile(null);
         }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
+      } catch (error: any) {
+        console.error("Auth initialization error details:", error);
+        if (error.code) {
+           console.error("Firebase Error Code:", error.code);
+        }
         setProfile(null);
       } finally {
         setLoading(false);

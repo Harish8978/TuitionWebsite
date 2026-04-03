@@ -64,6 +64,8 @@ const ManageStaff = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewingStaffAttendance, setViewingStaffAttendance] = useState<Staff | null>(null);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -341,12 +343,24 @@ const ManageStaff = () => {
                                 setIsModalOpen(true);
                               }}
                               className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit Staff"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => {
+                                setViewingStaffAttendance(s);
+                                setIsAttendanceModalOpen(true);
+                              }}
+                              className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Manage Attendance"
+                            >
+                              <Calendar className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleDelete(s.id)}
                               className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Staff"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -456,9 +470,9 @@ const ManageStaff = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden"
+              className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-blue-900 text-white">
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-blue-900 text-white shrink-0">
                 <h3 className="text-2xl font-black tracking-tight">
                   {editingStaff ? 'EDIT STAFF' : 'ADD NEW STAFF'}
                 </h3>
@@ -470,10 +484,11 @@ const ManageStaff = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Full Name</label>
+              <div className="overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Full Name</label>
                     <input
                       required
                       type="text"
@@ -558,6 +573,85 @@ const ManageStaff = () => {
                   </button>
                 </div>
               </form>
+             </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Attendance Management Modal */}
+      <AnimatePresence>
+        {isAttendanceModalOpen && viewingStaffAttendance && (
+          <div className="fixed inset-0 z-[65] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAttendanceModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-emerald-900 text-white shrink-0">
+                <h3 className="text-2xl font-black tracking-tight uppercase">
+                  ATTENDANCE: {viewingStaffAttendance.name}
+                </h3>
+                <button 
+                  onClick={() => setIsAttendanceModalOpen(false)}
+                  className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto">
+                <div className="space-y-4">
+                  {attendance
+                    .filter(a => a.staffId === viewingStaffAttendance.id && a.present)
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map(record => (
+                      <div key={record.id} className="flex justify-between items-center p-4 bg-slate-50 border border-slate-200 rounded-2xl group hover:border-emerald-200 hover:bg-emerald-50/50 transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-emerald-100 p-3 rounded-xl text-emerald-600">
+                            <CheckCircle2 className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900">{new Date(record.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                              Marked via {record.markedVia || 'System'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm('Are you sure you want to remove this attendance record? This will reduce the estimated salary.')) {
+                              try {
+                                await deleteDoc(doc(db, 'staffAttendance', record.id));
+                              } catch (error) {
+                                handleFirestoreError(error, OperationType.DELETE, 'staffAttendance');
+                              }
+                            }
+                          }}
+                          className="px-4 py-2 bg-white border border-red-200 text-red-600 font-bold text-sm rounded-xl hover:bg-red-50 transition-all shadow-sm flex items-center gap-2"
+                        >
+                          <X className="w-4 h-4" />
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    
+                  {attendance.filter(a => a.staffId === viewingStaffAttendance.id && a.present).length === 0 && (
+                    <div className="text-center py-12">
+                      <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500 font-medium">No attendance records found for this staff member.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

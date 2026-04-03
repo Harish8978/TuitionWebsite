@@ -10,7 +10,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, profile, isAdmin, isStudent, isStaff } = useAuth();
+  const { user, profile, loading: authLoading, isAdmin, isStudent, isStaff } = useAuth();
 
   useEffect(() => {
     if (user && profile) {
@@ -18,8 +18,11 @@ const Login: React.FC = () => {
       else if (isStaff) navigate('/staff');
       else if (isStudent) navigate('/portal');
       else navigate('/');
+    } else if (user && profile === null && !authLoading && loading) {
+      setLoading(false);
+      setError("Failed to load user profile. Please contact admin or try again.");
     }
-  }, [user, profile, isAdmin, isStudent, isStaff, navigate]);
+  }, [user, profile, authLoading, isAdmin, isStudent, isStaff, navigate, loading]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
