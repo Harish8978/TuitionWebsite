@@ -224,7 +224,7 @@ const ManageStudents: React.FC = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white p-10 rounded-3xl border border-slate-100 shadow-xl space-y-10"
+                className="bg-white p-6 md:p-10 rounded-3xl border border-slate-100 shadow-xl space-y-10"
               >
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-6">

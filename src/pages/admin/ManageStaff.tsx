@@ -157,8 +157,15 @@ const ManageStaff = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this staff member?')) {
+    if (window.confirm('Are you sure you want to delete this staff member? This will also delete all their attendance records.')) {
       try {
+        // Clean up attendance records first
+        const attendanceQ = query(collection(db, 'staffAttendance'), where('staffId', '==', id));
+        const attendanceSnap = await getDocs(attendanceQ);
+        const deletePromises = attendanceSnap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(deletePromises);
+
+        // Delete staff profile
         await deleteDoc(doc(db, 'staffs', id));
       } catch (error) {
         handleFirestoreError(error, OperationType.DELETE, `staffs/${id}`);

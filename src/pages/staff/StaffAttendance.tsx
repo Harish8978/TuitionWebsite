@@ -125,7 +125,7 @@ const StaffAttendance = () => {
           </button>
           <div>
             <h1 className="text-2xl font-black text-blue-900 tracking-tight uppercase">MY ATTENDANCE</h1>
-            <p className="text-slate-500 font-medium">Track your presence and salary history</p>
+            <p className="text-slate-500 font-medium">Track your presence</p>
           </div>
         </div>
         <button 
@@ -203,13 +203,7 @@ const StaffAttendance = () => {
                   <span className="text-red-600/60 font-bold mb-1">/ {daysInMonth}</span>
                 </div>
               </div>
-              <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100">
-                <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">Est. Salary</p>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-black text-blue-700">₹{stats.present * 300}</span>
-                  <span className="text-blue-600/60 font-bold mb-1">INR</span>
-                </div>
-              </div>
+
             </div>
           </div>
 

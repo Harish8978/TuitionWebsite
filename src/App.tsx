@@ -17,12 +17,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 import ViewEnquiries from './pages/admin/ViewEnquiries';
 import ManageCourses from './pages/admin/ManageCourses';
-import ManageTestimonials from './pages/admin/ManageTestimonials';
-import ManageStudents from './pages/admin/ManageStudents';
 import ManageStaff from './pages/admin/ManageStaff';
-import Notes from './pages/portal/Notes';
-import Attendance from './pages/portal/Attendance';
-import Marks from './pages/portal/Marks';
+import AdminAttendanceDashboard from './pages/admin/AdminAttendanceDashboard';
+import ManageContent from './pages/admin/ManageContent';
+import ManageTestimonials from './pages/admin/ManageTestimonials';
 import StaffDashboard from './pages/staff/StaffDashboard';
 import StaffAttendance from './pages/staff/StaffAttendance';
 import { AuthProvider } from './contexts/AuthContext';
@@ -73,20 +71,7 @@ export default function App() {
                 </DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/admin/testimonials" element={
-              <ProtectedRoute role="admin">
-                <DashboardLayout role="admin">
-                  <ManageTestimonials />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/students" element={
-              <ProtectedRoute role="admin">
-                <DashboardLayout role="admin">
-                  <ManageStudents />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } />
+
             <Route path="/admin/staff" element={
               <ProtectedRoute role="admin">
                 <DashboardLayout role="admin">
@@ -94,36 +79,29 @@ export default function App() {
                 </DashboardLayout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/attendance" element={
+              <ProtectedRoute role="admin">
+                <DashboardLayout role="admin">
+                  <AdminAttendanceDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/content" element={
+              <ProtectedRoute role="admin">
+                <DashboardLayout role="admin">
+                  <ManageContent />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/testimonials" element={
+              <ProtectedRoute role="admin">
+                <DashboardLayout role="admin">
+                  <ManageTestimonials />
+                </DashboardLayout>
+              </ProtectedRoute>
+            } />
 
-            {/* Student Portal Routes */}
-            <Route path="/portal" element={
-              <ProtectedRoute role="student">
-                <DashboardLayout role="student">
-                  <DashboardOverview />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/portal/notes" element={
-              <ProtectedRoute role="student">
-                <DashboardLayout role="student">
-                  <Notes />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/portal/attendance" element={
-              <ProtectedRoute role="student">
-                <DashboardLayout role="student">
-                  <Attendance />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/portal/marks" element={
-              <ProtectedRoute role="student">
-                <DashboardLayout role="student">
-                  <Marks />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } />
+
 
             {/* Staff Portal Routes */}
             <Route path="/staff" element={
@@ -140,13 +118,7 @@ export default function App() {
                 </DashboardLayout>
               </ProtectedRoute>
             } />
-            <Route path="/staff/students" element={
-              <ProtectedRoute role="staff">
-                <DashboardLayout role="staff">
-                  <ManageStudents />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } />
+
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

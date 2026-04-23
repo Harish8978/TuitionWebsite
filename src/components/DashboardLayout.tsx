@@ -43,9 +43,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role }) => 
     { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Overview', path: '/admin' },
     { icon: <BookOpen className="w-5 h-5" />, label: 'Courses', path: '/admin/courses' },
     { icon: <MessageSquare className="w-5 h-5" />, label: 'Enquiries', path: '/admin/enquiries' },
-    { icon: <Star className="w-5 h-5" />, label: 'Testimonials', path: '/admin/testimonials' },
-    { icon: <Users className="w-5 h-5" />, label: 'Students', path: '/admin/students' },
     { icon: <Briefcase className="w-5 h-5" />, label: 'Staff Management', path: '/admin/staff' },
+    { icon: <Star className="w-5 h-5" />, label: 'Testimonials', path: '/admin/testimonials' },
+    { icon: <FileText className="w-5 h-5" />, label: 'Manage Content', path: '/admin/content' },
+    { icon: <Calendar className="w-5 h-5" />, label: 'Staff Attendance', path: '/admin/attendance' },
   ];
 
   const studentNav = [
@@ -57,7 +58,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role }) => 
 
   const staffNav = [
     { icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', path: '/staff' },
-    { icon: <Users className="w-5 h-5" />, label: 'Manage Students', path: '/staff/students' },
     { icon: <Calendar className="w-5 h-5" />, label: 'Attendance', path: '/staff/attendance' },
   ];
 
@@ -192,7 +192,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role }) => 
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow p-8 lg:p-12 overflow-y-auto">
+      <main className="flex-grow p-4 sm:p-8 lg:p-12 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
           {children}
         </div>

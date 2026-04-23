@@ -49,6 +49,7 @@ interface AttendanceRecord {
   date: string;
   present: boolean;
   clockInTime: any;
+  clockOutTime?: any;
   markedVia: string;
 }
 
@@ -67,16 +68,20 @@ const StaffDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkInStatus, setCheckInStatus] = useState<
-    'idle' | 'gps-checking' | 'loading' | 'success' | 'already-marked' | 'error' | 'gps-denied' | 'outside-tuition'
+    'idle' | 'gps-checking' | 'loading' | 'success' | 'already-marked' | 'checked-in' | 'error' | 'gps-denied' | 'outside-tuition'
   >('idle');
   const [checkInError, setCheckInError] = useState<string | null>(null);
   const [gpsDistance, setGpsDistance] = useState<number | null>(null);
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const hasCheckedIn = attendance.some(record => record.date === today && record.present);
-    if (hasCheckedIn) {
-      setCheckInStatus('already-marked');
+    const todaysRecord = attendance.find(record => record.date === today && record.present);
+    if (todaysRecord) {
+      if (todaysRecord.clockOutTime) {
+        setCheckInStatus('already-marked');
+      } else {
+        setCheckInStatus('checked-in');
+      }
     } else if (checkInStatus !== 'success' && checkInStatus !== 'loading' && checkInStatus !== 'error') {
       setCheckInStatus('idle');
     }
@@ -86,9 +91,28 @@ const StaffDashboard = () => {
     if (!staffData || !user) return;
 
     const today = new Date().toISOString().split('T')[0];
-    const hasCheckedIn = attendance.some(record => record.date === today && record.present);
-    if (hasCheckedIn) {
+    const todaysRecord = attendance.find(record => record.date === today && record.present);
+    
+    if (todaysRecord && todaysRecord.clockOutTime) {
       setCheckInStatus('already-marked');
+      return;
+    }
+
+    if (todaysRecord && !todaysRecord.clockOutTime) {
+      // Check-out logic
+      setCheckInStatus('loading');
+      try {
+        const attendanceId = `${staffData.id}_${today}`;
+        const attendanceDoc = doc(db, 'staffAttendance', attendanceId);
+        await updateDoc(attendanceDoc, {
+          clockOutTime: serverTimestamp(),
+        });
+        setCheckInStatus('already-marked');
+      } catch (err: any) {
+        console.error(err);
+        setCheckInStatus('error');
+        setCheckInError(`Failed to save check-out: ${err.message || String(err)}`);
+      }
       return;
     }
 
@@ -141,7 +165,7 @@ const StaffDashboard = () => {
         gpsAccuracy: gpsResult.accuracy,
         distanceFromTuition: gpsResult.distanceMeters,
       });
-      setCheckInStatus('success');
+      setCheckInStatus('checked-in');
     } catch (err: any) {
       console.error(err);
       setCheckInStatus('error');
@@ -177,12 +201,19 @@ const StaffDashboard = () => {
       setLoading(false);
     });
 
-    // Fetch attendance for this staff using uid
+    return () => unsubscribeStaff();
+  }, [user]);
+
+  // Fetch attendance for this staff using staffId
+  useEffect(() => {
+    if (!staffData?.id) return;
+
     const attQ = query(
       collection(db, 'staffAttendance'), 
-      where('uid', '==', user.uid),
+      where('staffId', '==', staffData.id),
       limit(30)
     );
+
     const unsubscribeAtt = onSnapshot(attQ, (attSnapshot) => {
       const attData = attSnapshot.docs.map(doc => ({
         id: doc.id,
@@ -194,53 +225,19 @@ const StaffDashboard = () => {
       setError(null);
     }, (err) => {
       handleFirestoreError(err, OperationType.GET, 'staffAttendance');
-      setError("Failed to load attendance records. Please check permissions.");
+      setError("Failed to load attendance records.");
     });
 
-    // Fetch students
-    const studentQ = query(collection(db, 'users'), where('role', '==', 'student'));
-    const unsubscribeStudents = onSnapshot(studentQ, (studentSnapshot) => {
-      const studentData = studentSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          uid: data.uid || doc.id,
-          ...data
-        } as any;
-      }) as Student[];
-      setStudents(studentData);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'users');
-    });
-
-    return () => {
-      unsubscribeStaff();
-      unsubscribeAtt();
-      unsubscribeStudents();
-    };
-  }, [user]);
+    return () => unsubscribeAtt();
+  }, [staffData?.id]);
 
   const stats = [
-    {
-      label: 'Students Enrolled',
-      value: students.length,
-      icon: <Users className="w-6 h-6" />,
-      color: 'bg-blue-500',
-      trend: '+12% this month'
-    },
     {
       label: 'Days Present',
       value: attendance.filter(a => a.present).length,
       icon: <CheckCircle2 className="w-6 h-6" />,
       color: 'bg-emerald-500',
       trend: 'Last 30 days'
-    },
-    {
-      label: 'Estimated Salary',
-      value: `₹${(attendance.filter(a => a.present).length * (staffData?.dailySalary || 300))}`,
-      icon: <DollarSign className="w-6 h-6" />,
-      color: 'bg-amber-500',
-      trend: 'Current month'
     }
   ];
 
@@ -316,7 +313,7 @@ const StaffDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all group"
+            className="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all group"
           >
             <div className="flex items-start justify-between mb-6">
               <div className={`${stat.color} p-4 rounded-2xl text-white shadow-lg group-hover:scale-110 transition-transform`}>
@@ -336,37 +333,7 @@ const StaffDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <TeachingIdeas />
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-xl font-black text-blue-900 tracking-tight uppercase">RECENT STUDENTS</h3>
-              <Link to="/staff/students" className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">View All</Link>
-            </div>
-            <div className="p-4">
-              <div className="space-y-2">
-                {students.length > 0 ? students.slice(0, 5).map((student) => (
-                  <div key={student.id} className="flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-all group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-bold group-hover:bg-blue-100 group-hover:text-blue-900 transition-colors">
-                        {(student.displayName || '?').charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900">{student.displayName || 'Unnamed Student'}</p>
-                        <p className="text-xs text-slate-500 font-medium">Grade {student.grade || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <Link 
-                      to="/staff/students" 
-                      className="p-2 text-slate-400 hover:text-blue-900 hover:bg-white rounded-xl transition-all"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </Link>
-                  </div>
-                )) : (
-                  <div className="p-8 text-center text-slate-400 italic font-medium">No students enrolled yet.</div>
-                )}
-              </div>
-            </div>
-          </div>
+
 
           <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between">
@@ -377,7 +344,7 @@ const StaffDashboard = () => {
               </div>
             </div>
             <div className="p-8">
-              <div className="grid grid-cols-7 gap-4">
+              <div className="grid grid-cols-7 gap-2 sm:gap-4">
                 {attendance.length > 0 ? attendance.slice(0, 14).reverse().map((record, i) => (
                   <div key={i} className="flex flex-col items-center gap-2">
                     <div className={`w-full aspect-square rounded-xl flex items-center justify-center ${record.present ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
@@ -396,18 +363,34 @@ const StaffDashboard = () => {
         </div>
 
         <div className="space-y-8">
-          <div className="bg-blue-900 rounded-[2.5rem] p-8 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden group">
+          <div className="bg-blue-900 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden group">
             <div className="absolute -right-12 -top-12 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
             <h3 className="text-2xl font-black mb-6 tracking-tight uppercase relative z-10">DAILY ATTENDANCE</h3>
 
-            {/* ✅ Already marked or just succeeded */}
-            {(checkInStatus === 'already-marked' || checkInStatus === 'success') && (
+            {/* ✅ Already marked both check-in and check-out */}
+            {checkInStatus === 'already-marked' && (
               <div className="relative z-10 flex flex-col items-center justify-center space-y-4 py-4">
                 <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                 </div>
-                <p className="font-bold text-lg text-emerald-300">Attendance Marked</p>
+                <p className="font-bold text-lg text-emerald-300">Checked Out</p>
                 <p className="text-sm text-blue-200">You're all set for today!</p>
+              </div>
+            )}
+            
+            {/* 🟡 Checked in, needs to check out */}
+            {checkInStatus === 'checked-in' && (
+              <div className="relative z-10 space-y-6">
+                <div className="bg-amber-500/20 border border-amber-400/30 rounded-2xl p-4">
+                  <p className="text-amber-300 text-sm font-bold">📍 Checked in successfully. Don't forget to check out when you leave.</p>
+                </div>
+                <button
+                  onClick={handleCheckIn}
+                  className="w-full bg-white text-amber-600 py-4 rounded-2xl font-bold hover:bg-amber-50 transition-all shadow-lg flex items-center justify-center gap-3"
+                >
+                  <Clock className="w-5 h-5" />
+                  Check Out Now
+                </button>
               </div>
             )}
 
@@ -452,7 +435,7 @@ const StaffDashboard = () => {
             )}
 
             {/* Default / loading / error states */}
-            {(checkInStatus === 'idle' || checkInStatus === 'gps-checking' || checkInStatus === 'loading' || checkInStatus === 'error') && (
+            {(checkInStatus === 'idle' || checkInStatus === 'gps-checking' || checkInStatus === 'loading' || checkInStatus === 'error' || checkInStatus === 'success') && (
               <div className="relative z-10 space-y-6">
                 <p className="text-blue-100 font-medium">
                   {checkInStatus === 'gps-checking'
@@ -471,8 +454,8 @@ const StaffDashboard = () => {
                   {checkInStatus === 'gps-checking'
                     ? 'Checking Location…'
                     : checkInStatus === 'loading'
-                    ? 'Marking Attendance…'
-                    : 'Mark Present Today'}
+                    ? 'Processing…'
+                    : 'Mark Check-In Today'}
                 </button>
               </div>
             )}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, GraduationCap, Phone, Mail, MapPin, LayoutDashboard, LogIn, LogOut } from 'lucide-react';
+import { Menu, X, GraduationCap, Phone, Mail, MapPin, LayoutDashboard, LogIn, LogOut, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -219,11 +219,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <ul className="space-y-4 text-blue-100/80">
                 <li className="flex items-center gap-3">
                   <Phone className="w-5 h-5 text-orange-400" />
-                  <span>+91 7604936317</span>
+                  <span>+91 8667801603</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-orange-400" />
-                  <span>workwithharishp@gmail.com</span>
+                  <span>lokesharumugam6329@gmail.com</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-orange-400 mt-1" />
@@ -238,6 +238,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      {/* WhatsApp Floating Button */}
+      <a
+        href="https://wa.me/918667801603?text=Hi!%20I%20would%20like%20to%20know%20more%20about%20SK%20Tuition."
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 hover:scale-110 transition-all z-50 flex items-center justify-center group"
+        aria-label="Chat on WhatsApp"
+      >
+        <MessageCircle className="w-6 h-6" />
+        <span className="absolute right-full mr-4 bg-white text-slate-800 px-3 py-1.5 rounded-lg text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md pointer-events-none">
+          Chat with us!
+        </span>
+      </a>
     </div>
   );
 }

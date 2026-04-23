@@ -1,13 +1,25 @@
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { GraduationCap, Award, BookOpen, Lightbulb, Users, Heart } from 'lucide-react';
+import { GraduationCap, Award, BookOpen, Lightbulb, Users, Heart, Mail } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import Lokesh from "../assets/Lokesh.png"
 
 export default function About() {
   const stats = [
-    { label: "Years Experience", value: "10+" },
-    { label: "Students Taught", value: "500+" },
-    { label: "Subjects Covered", value: "15+" },
-    { label: "Success Rate", value: "98%" },
+    { label: "Years Experience", value: "3+" },
+    { label: "Students Taught", value: "100+" },
+    // { label: "Subjects Covered", value: "5+" },
+    { label: "Success Rate", value: "95%" },
   ];
+
+  const [staff, setStaff] = useState<any[]>([]);
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'staffs'), orderBy('name')), snap => {
+      setStaff(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
 
   const values = [
     {
@@ -62,7 +74,7 @@ export default function About() {
             >
               <div className="aspect-square rounded-3xl overflow-hidden border-8 border-white/10 shadow-2xl">
                 <img 
-                  src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=800" 
+                  src={Lokesh} 
                   alt="Lokesh Arumugam" 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -86,17 +98,17 @@ export default function About() {
                 Qualifications
               </h2>
               <ul className="space-y-4 text-slate-600 text-lg">
-                <li className="flex items-start gap-3">
+                {/* <li className="flex items-start gap-3">
                   <div className="w-2 h-2 rounded-full bg-orange-500 mt-2.5 shrink-0" />
                   <span>Master's Degree in Science (M.Sc)</span>
+                </li> */}
+                <li className="flex items-start gap-3">
+                  <div className="w-2 h-2 rounded-full bg-orange-500 mt-2.5 shrink-0" />
+                  <span>Bachelor's Degree in Computer Science</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 rounded-full bg-orange-500 mt-2.5 shrink-0" />
-                  <span>Bachelor's Degree in Education (B.Ed)</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full bg-orange-500 mt-2.5 shrink-0" />
-                  <span>Certified Academic Coach with 10+ years of experience</span>
+                  <span>Certified Academic Coach with 5+ years of experience</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 rounded-full bg-orange-500 mt-2.5 shrink-0" />
@@ -140,6 +152,38 @@ export default function About() {
           </div>
         </div>
       </section>
+
+      {/* Staff Section */}
+      {staff.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-blue-900 mb-4">Our Teaching Staff</h2>
+            <p className="text-slate-500 max-w-2xl mx-auto">Meet our dedicated team of educators committed to your success.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {staff.map((s, i) => (
+              <motion.div 
+                key={s.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col items-center text-center"
+              >
+                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center text-blue-900 font-bold text-3xl mb-6">
+                  {s.name.charAt(0)}
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">{s.name}</h3>
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  {(s.subjects || []).map((sub: string, idx: number) => (
+                    <span key={idx} className="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">{sub}</span>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

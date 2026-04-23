@@ -16,8 +16,10 @@ const Login: React.FC = () => {
     if (user && profile) {
       if (isAdmin) navigate('/admin');
       else if (isStaff) navigate('/staff');
-      else if (isStudent) navigate('/portal');
-      else navigate('/');
+      else {
+        auth.signOut();
+        setError("Unauthorized access. Admin or Staff only.");
+      }
     } else if (user && profile === null && !authLoading && loading) {
       setLoading(false);
       setError("Failed to load user profile. Please contact admin or try again.");
@@ -46,8 +48,8 @@ const Login: React.FC = () => {
         <div className="bg-blue-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <GraduationCap className="w-8 h-8 text-blue-900" />
         </div>
-        <h2 className="text-3xl font-bold text-blue-900 mb-2">Welcome Back</h2>
-        <p className="text-slate-500 mb-8">Access your student portal or admin dashboard</p>
+        <h2 className="text-3xl font-bold text-blue-900 mb-2">Admin / Staff Login</h2>
+        <p className="text-slate-500 mb-8">Access the management dashboard</p>
         
         {error && (
           <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-medium">

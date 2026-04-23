@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { GraduationCap, ArrowRight, Star, Users, Award, MapPin, CheckCircle2, Send, Loader2, MessageSquare } from 'lucide-react';
+import { GraduationCap, ArrowRight, Star, Users, Award, MapPin, CheckCircle2, Send, Loader2, MessageSquare, Megaphone, Image as ImageIcon, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
@@ -15,49 +15,30 @@ interface Testimonial {
 }
 
 export default function Home() {
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', marks: '', feedback: '' });
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  // Public content states
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [ads, setAds] = useState<any[]>([]);
+  const [gallery, setGallery] = useState<any[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'testimonials'), orderBy('timestamp', 'desc'), limit(6));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Testimonial));
-      setTestimonials(docs);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'testimonials');
+
+    const unsubAnn = onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc'), limit(3)), snap => {
+      setAnnouncements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    return () => unsubscribe();
+    const unsubAds = onSnapshot(query(collection(db, 'advertisements'), orderBy('createdAt', 'desc'), limit(4)), snap => {
+      setAds(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    const unsubGallery = onSnapshot(query(collection(db, 'gallery'), orderBy('createdAt', 'desc'), limit(8)), snap => {
+      setGallery(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => { unsubAnn(); unsubAds(); unsubGallery(); };
   }, []);
 
-  const handleFeedbackSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await addDoc(collection(db, 'testimonials'), {
-        ...formData,
-        timestamp: serverTimestamp()
-      });
-      setSubmitStatus('success');
-      setFormData({ name: '', marks: '', feedback: '' });
-      setTimeout(() => {
-        setSubmitStatus('idle');
-        setShowForm(false);
-      }, 3000);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'testimonials');
-      setSubmitStatus('error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const highlights = [
-    { icon: <Award className="w-8 h-8 text-orange-500" />, title: "10+ Years Experience", desc: "Expert guidance from Lokesh Arumugam." },
-    { icon: <Star className="w-8 h-8 text-blue-500" />, title: "98% Success Rate", desc: "Consistently delivering top results." },
-    { icon: <Users className="w-8 h-8 text-emerald-500" />, title: "500+ Students", desc: "Trusted by parents and students alike." },
+    { icon: <Award className="w-8 h-8 text-orange-500" />, title: "3+ Years Experience", desc: "Expert guidance from Lokesh Arumugam." },
+    { icon: <Star className="w-8 h-8 text-blue-500" />, title: "95% Success Rate", desc: "Consistently delivering top results." },
+    { icon: <Users className="w-8 h-8 text-emerald-500" />, title: "100+ Students", desc: "Trusted by parents and students alike." },
   ];
 
   return (
@@ -120,8 +101,8 @@ export default function Home() {
                       <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-slate-900">500+ Enrolled</p>
-                      <p className="text-sm text-slate-500">This academic year</p>
+                      <p className="text-2xl font-bold text-slate-900">200+ Enrolled</p>
+                      <p className="text-sm text-slate-500">Since 2021</p>
                     </div>
                   </div>
                 </div>
@@ -150,129 +131,72 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="bg-slate-50 py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-            <div className="space-y-4 text-left">
-              <h2 className="text-4xl font-bold text-blue-900">Student Results & Feedback</h2>
-              <p className="text-slate-500 max-w-2xl">Hear from our students and parents about their journey with SK Tuition.</p>
-            </div>
-            <button 
-              onClick={() => setShowForm(!showForm)}
-              className="bg-orange-500 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
-            >
-              <MessageSquare className="w-5 h-5" />
-              {showForm ? 'Cancel' : 'Give Feedback'}
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showForm && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-16 overflow-hidden"
-              >
-                <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 max-w-2xl mx-auto">
-                  <h3 className="text-2xl font-bold text-blue-900 mb-6">Share Your Experience</h3>
-                  <form onSubmit={handleFeedbackSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Your Name</label>
-                        <input 
-                          required
-                          type="text" 
-                          placeholder="Enter your name"
-                          className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 transition-all outline-none"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Achievement / Context</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. 95% in 10th Maths"
-                          className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 transition-all outline-none"
-                          value={formData.marks}
-                          onChange={(e) => setFormData({ ...formData, marks: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Your Feedback</label>
-                      <textarea 
-                        required
-                        rows={4}
-                        placeholder="Tell us about your experience..."
-                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 transition-all outline-none resize-none"
-                        value={formData.feedback}
-                        onChange={(e) => setFormData({ ...formData, feedback: e.target.value })}
-                      />
-                    </div>
-
-                    {submitStatus === 'success' && (
-                      <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 p-4 rounded-xl">
-                        <CheckCircle2 className="w-5 h-5" />
-                        <p className="text-sm font-medium">Thank you for your feedback!</p>
-                      </div>
-                    )}
-
-                    <button 
-                      disabled={isSubmitting}
-                      type="submit"
-                      className="w-full bg-blue-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-all shadow-lg disabled:opacity-70"
-                    >
-                      {isSubmitting ? (
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                      ) : (
-                        <>
-                          Submit Feedback
-                          <Send className="w-5 h-5" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.length > 0 ? (
-              testimonials.map((t, i) => (
-                <motion.div 
-                  key={t.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 relative flex flex-col h-full"
-                >
-                  <div className="flex items-center gap-1 text-orange-400 mb-6">
-                    {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-4 h-4 fill-current" />)}
-                  </div>
-                  <p className="text-slate-600 italic mb-8 leading-relaxed flex-grow">"{t.feedback}"</p>
-                  <div className="flex items-center gap-4 mt-auto">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-900 font-bold shrink-0">
-                      {t.name[0]}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900">{t.name}</h4>
-                      <p className="text-sm text-orange-600 font-semibold">{t.marks}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12 text-slate-400 italic">
-                No feedback yet. Be the first to share your experience!
+      {/* Announcements Section */}
+      {announcements.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-orange-50 rounded-3xl p-8 border border-orange-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-orange-500 p-2 rounded-xl text-white">
+                <Megaphone className="w-6 h-6" />
               </div>
-            )}
+              <h2 className="text-2xl font-bold text-orange-900">Latest Announcements</h2>
+            </div>
+            <div className="space-y-4">
+              {announcements.map((ann) => (
+                <div key={ann.id} className="bg-white p-6 rounded-2xl shadow-sm border border-orange-100">
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{ann.title}</h3>
+                  <p className="text-slate-600">{ann.content}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Advertisements Section */}
+      {ads.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {ads.map((ad) => (
+              <a 
+                key={ad.id} 
+                href={ad.link || '#'} 
+                target={ad.link ? "_blank" : "_self"} 
+                rel="noopener noreferrer"
+                className="block group relative rounded-3xl overflow-hidden aspect-video shadow-md hover:shadow-xl transition-all"
+              >
+                <img src={ad.imageUrl} alt={ad.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 flex flex-col justify-end">
+                  <h3 className="text-white font-bold text-lg">{ad.title}</h3>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+
+
+      {/* Media Gallery Section */}
+      {gallery.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-blue-900 mb-4">Our Gallery</h2>
+            <p className="text-slate-500 max-w-2xl mx-auto">Glimpses of our events, classes, and special moments.</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {gallery.map((media) => (
+              <div key={media.id} className="relative group rounded-3xl overflow-hidden aspect-square border border-slate-100 shadow-sm">
+                {media.type === 'video' ? (
+                  <video src={media.url} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+                ) : (
+                  <img src={media.url} alt="Gallery" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Location Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -284,7 +208,7 @@ export default function Home() {
               </div>
               <h2 className="text-4xl font-bold text-blue-900">Visit Our Center</h2>
               <p className="text-slate-600 text-lg leading-relaxed">
-                Located at Hindu College, our center provides a peaceful and focused environment for learning. 
+                Located near Hindu College, our center provides a peaceful and focused environment for learning. 
                 Equipped with modern teaching aids to help students excel.
               </p>
               <div className="space-y-4">
@@ -302,7 +226,7 @@ export default function Home() {
                 </div>
               </div>
               <a 
-                href="https://www.google.com/maps?q=Hindu+College+Tamil+Nadu" 
+                href="https://maps.app.goo.gl/32g9qxUuLEKDR5eT8" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-blue-900 font-bold hover:underline"
@@ -312,15 +236,16 @@ export default function Home() {
               </a>
             </div>
             <div className="h-[500px] bg-slate-200">
-              <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3886.5123456789!2d77.123456!3d11.123456!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTHCsDA3JzI0LjQiTiA3N8KwMDcnMjQuNCJF!5e0!3m2!1sen!2sin!4v1234567890" 
+                            <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d118225.12274415843!2d80.02297041670762!3d13.045005096928342!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a5289c8e3fb42dd%3A0x658d9b0a453aad3d!2sSK%20Tuition%20Centre!5e1!3m2!1sen!2sin!4v1776924942138!5m2!1sen!2sin" 
                 width="100%" 
                 height="100%" 
                 style={{ border: 0 }} 
                 allowFullScreen 
                 loading="lazy" 
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Google Maps Location"
+                title="SK Tuition Centre Location"
+                className="w-full h-full"
               ></iframe>
             </div>
           </div>

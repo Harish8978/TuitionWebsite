@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { BookOpen, Clock, CreditCard, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firestoreError';
 
@@ -11,24 +11,20 @@ export default function Courses() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        setLoading(true);
-        const q = query(collection(db, 'courses'), orderBy('title'));
-        const querySnapshot = await getDocs(q);
-        const fetchedCourses = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setCourses(fetchedCourses);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, 'courses');
-      } finally {
-        setLoading(false);
-      }
-    };
+    const q = query(collection(db, 'courses'), orderBy('title'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const fetchedCourses = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCourses(fetchedCourses);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'courses');
+      setLoading(false);
+    });
 
-    fetchCourses();
+    return () => unsub();
   }, []);
 
   if (loading) {

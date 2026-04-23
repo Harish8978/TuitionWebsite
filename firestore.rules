@@ -124,5 +124,20 @@ service cloud.firestore {
       allow read: if isAdmin() || isStaff();
       allow create: if isAuthenticated();
     }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /advertisements/{adId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gallery/{mediaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

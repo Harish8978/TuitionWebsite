@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Edit2, Trash2, X, Save, BookOpen, GraduationCap, DollarSign, Image as ImageIcon, Search } from 'lucide-react';
@@ -28,16 +28,17 @@ const ManageCourses: React.FC = () => {
     price: ''
   });
 
-  const fetchCourses = async () => {
-    setLoading(true);
-    const q = query(collection(db, 'courses'), orderBy('title'));
-    const snap = await getDocs(q);
-    setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course)));
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchCourses();
+    const q = query(collection(db, 'courses'), orderBy('title'));
+    const unsub = onSnapshot(q, (snap) => {
+      setCourses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course)));
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching courses:", error);
+      setLoading(false);
+    });
+
+    return () => unsub();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +57,6 @@ const ManageCourses: React.FC = () => {
     setShowForm(false);
     setEditingCourse(null);
     setFormData({ title: '', description: '', grade: '', subjects: '', price: '' });
-    fetchCourses();
   };
 
   const handleEdit = (course: Course) => {
@@ -74,7 +74,6 @@ const ManageCourses: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this course?')) {
       await deleteDoc(doc(db, 'courses', id));
-      fetchCourses();
     }
   };
 

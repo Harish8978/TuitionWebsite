@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, Star, User, Calendar, MessageSquare } from 'lucide-react';
@@ -9,28 +9,23 @@ const ManageTestimonials: React.FC = () => {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTestimonials = async () => {
-    try {
-      setLoading(true);
-      const q = query(collection(db, 'testimonials'), orderBy('timestamp', 'desc'));
-      const snap = await getDocs(q);
-      setTestimonials(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, 'testimonials');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchTestimonials();
+    const q = query(collection(db, 'testimonials'), orderBy('timestamp', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setTestimonials(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'testimonials');
+      setLoading(false);
+    });
+
+    return () => unsub();
   }, []);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this testimonial?')) {
       try {
         await deleteDoc(doc(db, 'testimonials', id));
-        fetchTestimonials();
       } catch (error) {
         handleFirestoreError(error, OperationType.DELETE, `testimonials/${id}`);
       }

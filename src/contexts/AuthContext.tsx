@@ -69,6 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const updatedProfile = { ...existingProfile, role: 'staff' as const };
               await setDoc(doc(db, 'users', user.uid), updatedProfile);
               setProfile(updatedProfile);
+            } else if (!isAdminEmail && !isStaffEmail && existingProfile.role === 'student') {
+               await auth.signOut();
+               throw new Error("Unauthorized access. Admin or Staff only.");
             } else {
               setProfile(existingProfile);
             }
@@ -81,8 +84,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               uid: user.uid,
               email: user.email || '',
               displayName: user.displayName || '',
-              role: isAdminEmail ? 'admin' : (isStaffEmail ? 'staff' : 'student'),
+              role: isAdminEmail ? 'admin' : (isStaffEmail ? 'staff' : 'unauthorized' as any),
             };
+            
+            if ((newProfile.role as string) === 'unauthorized') {
+              await auth.signOut();
+              throw new Error("Unauthorized access. Admin or Staff only.");
+            }
+            
             await setDoc(doc(db, 'users', user.uid), newProfile);
             setProfile(newProfile);
           }

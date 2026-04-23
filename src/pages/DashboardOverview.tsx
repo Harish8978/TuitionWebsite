@@ -14,9 +14,10 @@ import {
   BarChart3,
   ChevronRight,
   Plus,
-  Edit2
+  Edit2,
+  Trash2
 } from 'lucide-react';
-import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import StaffDashboard from './staff/StaffDashboard';
@@ -36,98 +37,80 @@ const AdminOverview: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const [studentsSnap, coursesSnap, enquiriesSnap, testimonialsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'users'), where('role', '==', 'student'))),
-          getDocs(collection(db, 'courses')),
-          getDocs(collection(db, 'enquiries')),
-          getDocs(collection(db, 'testimonials'))
-        ]);
+    let statsLoaded = false;
+    let coursesLoaded = false;
+    let enquiriesLoaded = false;
 
-        let courseCount = coursesSnap.size;
-        let coursesData = coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Auto-seed if empty
-        if (courseCount === 0) {
-          const initialCourses = [
-            {
-              title: "Primary Foundation",
-              grade: "1st - 5th Standard",
-              subjects: ["Maths", "Science", "English", "Tamil"],
-              timings: "4:00 PM - 5:30 PM",
-              price: "₹1,500 / month",
-              description: "Building a strong foundation in core subjects through interactive learning.",
-              image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=800"
-            },
-            {
-              title: "Middle School Excellence",
-              grade: "6th - 8th Standard",
-              subjects: ["Maths", "Science", "Social Science"],
-              timings: "5:30 PM - 7:00 PM",
-              price: "₹2,500 / month",
-              description: "Focused learning to bridge the gap between primary and secondary education.",
-              image: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=800"
-            },
-            {
-              title: "Secondary Board Prep",
-              grade: "9th - 10th Standard",
-              subjects: ["Maths", "Physics", "Chemistry", "Biology"],
-              timings: "6:00 PM - 8:00 PM",
-              price: "₹3,500 / month",
-              description: "Intensive training for board exams with regular mock tests and assessments.",
-              image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=800"
-            },
-            {
-              title: "Higher Secondary Specialization",
-              grade: "11th - 12th Standard",
-              subjects: ["Maths", "Physics", "Chemistry"],
-              timings: "7:00 PM - 9:00 PM",
-              price: "₹4,500 / month",
-              description: "Advanced concepts and preparation for competitive exams and higher studies.",
-              image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=800"
-            }
-          ];
-
-          const { addDoc } = await import('firebase/firestore');
-          const seedPromises = initialCourses.map(course => 
-            addDoc(collection(db, 'courses'), {
-              ...course,
-              createdAt: new Date().toISOString()
-            })
-          );
-          await Promise.all(seedPromises);
-          
-          // Re-fetch after seeding
-          const newCoursesSnap = await getDocs(collection(db, 'courses'));
-          courseCount = newCoursesSnap.size;
-          coursesData = newCoursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
-
-        setStats({
-          students: studentsSnap.size,
-          courses: courseCount,
-          enquiries: enquiriesSnap.size,
-          testimonials: testimonialsSnap.size
-        });
-
-        // Fetch recent enquiries
-        const enquiriesQ = query(collection(db, 'enquiries'), orderBy('timestamp', 'desc'), limit(5));
-        const recentSnap = await getDocs(enquiriesQ);
-        setRecentEnquiries(recentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-        setActiveCourses(coursesData);
-
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, 'admin_stats');
-      } finally {
+    const checkLoading = () => {
+      if (statsLoaded && coursesLoaded && enquiriesLoaded) {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    // Listen for users (students)
+    const unsubStudents = onSnapshot(query(collection(db, 'users'), where('role', '==', 'student')), (snap) => {
+      setStats(prev => ({ ...prev, students: snap.size }));
+      statsLoaded = true;
+      checkLoading();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'admin_students_stats');
+      statsLoaded = true;
+      checkLoading();
+    });
+
+    // Listen for courses
+    const unsubCourses = onSnapshot(query(collection(db, 'courses'), orderBy('title')), (snap) => {
+      setStats(prev => ({ ...prev, courses: snap.size }));
+      const coursesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setActiveCourses(coursesData);
+      coursesLoaded = true;
+      checkLoading();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'admin_courses_stats');
+      coursesLoaded = true;
+      checkLoading();
+    });
+
+    // Listen for enquiries
+    const unsubEnquiries = onSnapshot(collection(db, 'enquiries'), (snap) => {
+      setStats(prev => ({ ...prev, enquiries: snap.size }));
+      enquiriesLoaded = true;
+      checkLoading();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'admin_enquiries_stats');
+      enquiriesLoaded = true;
+      checkLoading();
+    });
+
+    // Listen for testimonials
+    const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), (snap) => {
+      setStats(prev => ({ ...prev, testimonials: snap.size }));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'admin_testimonials_stats'));
+
+    // Listen for recent enquiries
+    const enquiriesQ = query(collection(db, 'enquiries'), orderBy('timestamp', 'desc'), limit(5));
+    const unsubRecentEnquiries = onSnapshot(enquiriesQ, (snap) => {
+      setRecentEnquiries(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'admin_recent_enquiries'));
+
+    return () => {
+      unsubStudents();
+      unsubCourses();
+      unsubEnquiries();
+      unsubTestimonials();
+      unsubRecentEnquiries();
+    };
   }, []);
+
+  const handleDeleteCourse = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this course?')) {
+      try {
+        await deleteDoc(doc(db, 'courses', id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `courses/${id}`);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -138,7 +121,6 @@ const AdminOverview: React.FC = () => {
   }
 
   const statCards = [
-    { icon: <Users className="w-6 h-6 text-blue-600" />, label: 'Total Students', value: stats.students, color: 'bg-blue-50' },
     { icon: <BookOpen className="w-6 h-6 text-emerald-600" />, label: 'Active Courses', value: stats.courses, color: 'bg-emerald-50' },
     { icon: <MessageSquare className="w-6 h-6 text-orange-600" />, label: 'New Enquiries', value: stats.enquiries, color: 'bg-orange-50' },
     { icon: <Star className="w-6 h-6 text-purple-600" />, label: 'Testimonials', value: stats.testimonials, color: 'bg-purple-50' },
@@ -223,13 +205,7 @@ const AdminOverview: React.FC = () => {
               </div>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <Link to="/admin/students" className="bg-white text-blue-900 border-2 border-blue-900 p-6 rounded-3xl font-bold flex items-center justify-between hover:bg-blue-50 transition-all group">
-              <div className="flex items-center gap-4">
-                <Users className="w-6 h-6" />
-                Manage Students
-              </div>
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
+
           </div>
         </div>
       </div>
@@ -273,9 +249,17 @@ const AdminOverview: React.FC = () => {
                 </div>
                 <div className="pt-4 border-t border-slate-50 flex justify-between items-center">
                   <p className="text-lg font-black text-blue-900">{course.price}</p>
-                  <Link to="/admin/courses" className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link to="/admin/courses" className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors">
+                      <Edit2 className="w-4 h-4" />
+                    </Link>
+                    <button 
+                      onClick={() => handleDeleteCourse(course.id)}
+                      className="p-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
